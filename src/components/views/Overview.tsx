@@ -29,6 +29,7 @@ const EVIDENCE_LABEL: Record<string, string> = {
   employer: 'Employer',
   job_history: 'Job history',
   email_domain: 'Company email',
+  phone: 'Phone',
   field: 'Field of study',
   location: 'City',
   middle: 'Middle initial',
@@ -36,7 +37,7 @@ const EVIDENCE_LABEL: Record<string, string> = {
   state: 'State',
 }
 
-const STRONG = new Set(['employer', 'job_history', 'email', 'email_domain', 'address', 'business_address'])
+const STRONG = new Set(['employer', 'job_history', 'email', 'email_domain', 'phone', 'address', 'business_address'])
 
 const pct = (n: number, total: number) => (total ? Math.round((n / total) * 100) : 0)
 

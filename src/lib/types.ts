@@ -35,6 +35,8 @@ export interface AscendMatch {
   emails: string[]
   addresses: string[]
   otherNames: string[]
+  phones?: string[]
+  degrees?: string[]
 }
 
 export interface PitchBookRecord {

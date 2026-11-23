@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { motion } from 'motion/react'
 import {
   AtSign,
+  Phone,
   Briefcase,
   Building2,
   ChevronDown,
@@ -41,8 +42,9 @@ const EVIDENCE_ICON: Record<string, typeof Mail> = {
   state: MapPin,
   title: Briefcase,
   middle: Type,
+  phone: Phone,
 }
-const STRONG = new Set(['employer', 'job_history', 'email', 'email_domain', 'address', 'business_address'])
+const STRONG = new Set(['employer', 'job_history', 'email', 'email_domain', 'phone', 'address', 'business_address'])
 
 interface Props {
   founder: Founder
@@ -169,6 +171,8 @@ export function DetailPanel({ founder: f, onPrev, onNext, onClose, position }: P
             <ListBlock title="Job history" items={a.jobHistory} />
             <ListBlock title="Emails on file" items={a.emails} />
             <ListBlock title="Addresses on file" items={a.addresses} />
+            <ListBlock title="Phones on file" items={a.phones ?? []} />
+            <ListBlock title="Degrees on file" items={a.degrees ?? []} />
             <ListBlock title="Other names" items={a.otherNames.filter((n) => n.toLowerCase() !== f.name.toLowerCase())} />
           </Section>
         )}

@@ -78,7 +78,7 @@ def website_block(rec):
             "revenue": d.get("Revenue", ""), "status": d.get("Status", ""), "website": d.get("Website", ""),
             "companyLinkedin": d.get("LinkedIn page", "")}
 
-EV_LABEL = {"employer": "Employer", "email": "Email", "email_domain": "Company email", "job_history": "Job history",
+EV_LABEL = {"employer": "Employer", "email": "Email", "phone": "Phone", "email_domain": "Company email", "job_history": "Job history",
             "address": "Office address", "business_address": "Business address", "year": "Degree year",
             "field": "Field of study", "location": "City", "state": "State", "title": "Job title", "middle": "Middle initial"}
 EV_ORDER = list(EV_LABEL)
@@ -97,7 +97,7 @@ def ascend_block(b):
             "degreeYear": b.get("degree_year", ""), "primaryEmail": b.get("email", ""), "primaryAddress": b.get("address", ""),
             "jobHistory": det.get("affiliations", []), "emails": det.get("emails", []) or ([b["email"]] if b.get("email") else []),
             "addresses": det.get("addresses", []) or ([b["address"]] if b.get("address") else []),
-            "otherNames": det.get("other_names", [])}
+            "otherNames": det.get("other_names", []), "phones": det.get("phones", []), "degrees": det.get("degrees", [])}
 
 
 GENERIC_MAIL = re.compile(r"gmail|yahoo|hotmail|outlook|aol|icloud|me\.com|comcast|msn|live\.com|verizon|att\.net|protonmail|northeastern\.edu|neu\.edu|mac\.com|ymail")

@@ -19,6 +19,7 @@ export const EVIDENCE_LABELS: Record<string, string> = {
   job_history: 'Job history',
   email: 'Email',
   email_domain: 'Company email',
+  phone: 'Phone',
   address: 'Office address',
   business_address: 'Business address',
   year: 'Degree year',

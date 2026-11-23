@@ -349,7 +349,7 @@ function Cell({ column, founder: f, dense }: { column: ColumnDef; founder: Found
       return <CopyId value={f.ascend?.householdId ?? ''} label="Household ascend ID" />
     case 'matchedOn': {
       if (!f.evidence.length) return muted
-      const strong = new Set(['employer', 'job_history', 'email', 'email_domain', 'address', 'business_address'])
+      const strong = new Set(['employer', 'job_history', 'email', 'email_domain', 'phone', 'address', 'business_address'])
       const ev = [...f.evidence].sort((a, b) => Number(strong.has(b.kind)) - Number(strong.has(a.kind)))
       return (
         <span className="flex min-w-0 items-center gap-1">
