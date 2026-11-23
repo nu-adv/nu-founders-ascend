@@ -4,18 +4,11 @@ import { Check, Download, FileSpreadsheet, FileText, Loader2, Rows3, SquareCheck
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Segmented, SectionLabel } from '@/components/kit/primitives'
 import { COLUMNS, EXPORT_PRESETS, type ColumnGroup } from '@/lib/columns'
 import { exportFounders, type ExportFormat } from '@/lib/exporter'
 import type { Decisions, Founder } from '@/lib/types'
@@ -152,25 +145,30 @@ export function ExportDialog({ open, onOpenChange, filteredRows, selectedRows, a
   }
 
   const scopes: { id: Scope; label: string; count: number; icon: typeof Rows3; hint: string }[] = [
-    { id: 'view', label: 'Current view', count: filteredRows.length, icon: Rows3, hint: 'Rows matching your filters' },
-    { id: 'selected', label: 'Selected rows', count: selectedRows.length, icon: SquareCheck, hint: 'Rows you ticked' },
+    { id: 'view', label: 'Current view', count: filteredRows.length, icon: Rows3, hint: 'Matching your filters' },
+    { id: 'selected', label: 'Selected', count: selectedRows.length, icon: SquareCheck, hint: 'Rows you ticked' },
     { id: 'all', label: 'Everything', count: allRows.length, icon: Users, hint: 'All founders' },
   ]
 
   return (
     <Dialog open={open} onOpenChange={(o) => !busy && onOpenChange(o)}>
-      <DialogContent className="flex max-h-[92svh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
-        <DialogHeader className="border-b px-5 pt-5 pb-4">
-          <DialogTitle className="flex items-center gap-2 font-heading text-2xl font-medium tracking-tight">
-            <FileSpreadsheet className="size-5 text-primary" /> Export to Excel
-          </DialogTitle>
-          <DialogDescription>Pick the rows and the columns you want. The file is built in your browser.</DialogDescription>
+      <DialogContent className="flex max-h-[92svh] flex-col gap-0 overflow-hidden rounded-2xl border bg-surface p-0 shadow-[var(--shadow-float)] ring-0 sm:max-w-[40rem]">
+        <DialogHeader className="flex-row items-start gap-3 border-b px-5 pt-5 pb-4 text-left">
+          <span className="grid size-9 shrink-0 place-items-center rounded-[0.65rem] border bg-muted/60">
+            <FileSpreadsheet className="size-4 text-foreground/80" />
+          </span>
+          <div className="min-w-0 space-y-0.5">
+            <DialogTitle className="text-base font-semibold tracking-tight">Export</DialogTitle>
+            <DialogDescription className="text-[0.8125rem]">
+              Choose rows and columns. The file is built in your browser — nothing is uploaded.
+            </DialogDescription>
+          </div>
         </DialogHeader>
 
-        <div className="scrollbar-thin min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5">
+        <div className="scrollbar-thin min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">
           {/* Rows */}
-          <section className="space-y-2.5">
-            <h3 className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">Rows</h3>
+          <section className="space-y-2">
+            <SectionLabel>Rows</SectionLabel>
             <div role="radiogroup" aria-label="Rows to export" className="grid gap-2 sm:grid-cols-3">
               {scopes.map((s) => {
                 const disabled = s.count === 0
@@ -185,17 +183,24 @@ export function ExportDialog({ open, onOpenChange, filteredRows, selectedRows, a
                     disabled={disabled}
                     onClick={() => setScope(s.id)}
                     className={cn(
-                      'group relative flex flex-col items-start gap-1 rounded-lg border bg-card px-3.5 py-3 text-left transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-45',
-                      active ? 'border-primary bg-primary/[0.06] ring-1 ring-primary/40' : 'hover:bg-muted/60',
+                      'relative flex flex-col items-start gap-0.5 rounded-xl border bg-card px-3 py-2.5 text-left shadow-[var(--shadow-hairline)] transition-[background-color,border-color,box-shadow] duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-45',
+                      active ? 'border-foreground/25 bg-accent/70 ring-1 ring-foreground/10' : 'hover:bg-accent/50',
                     )}
                   >
-                    <span className="flex w-full items-center gap-2 text-sm font-medium">
-                      <s.icon className={cn('size-4', active ? 'text-primary' : 'text-muted-foreground')} />
+                    <span className="flex w-full items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                      <s.icon className="size-3.5" />
                       {s.label}
-                      {active && <Check className="ml-auto size-4 text-primary" />}
+                      <span
+                        className={cn(
+                          'ml-auto grid size-4 place-items-center rounded-full border transition-colors',
+                          active ? 'border-primary bg-primary text-primary-foreground' : 'bg-background',
+                        )}
+                      >
+                        {active && <Check className="size-2.5" strokeWidth={3} />}
+                      </span>
                     </span>
-                    <span className="font-mono text-xl tabular">{s.count.toLocaleString()}</span>
-                    <span className="text-xs text-muted-foreground">{s.hint}</span>
+                    <span className="text-xl font-semibold tracking-tight tabular">{s.count.toLocaleString()}</span>
+                    <span className="text-[0.625rem] text-muted-foreground">{s.hint}</span>
                   </button>
                 )
               })}
@@ -203,87 +208,90 @@ export function ExportDialog({ open, onOpenChange, filteredRows, selectedRows, a
           </section>
 
           {/* Format */}
-          <section className="flex flex-wrap items-end justify-between gap-4">
-            <div className="space-y-2.5">
-              <h3 className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">Format</h3>
-              <ToggleGroup
-                type="single"
-                variant="outline"
+          <section className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <SectionLabel>Format</SectionLabel>
+              <Segmented<ExportFormat>
+                id="export-format"
                 value={format}
-                onValueChange={(v) => v && setFormat(v as ExportFormat)}
-                aria-label="File format"
-              >
-                <ToggleGroupItem value="xlsx" className="gap-1.5 px-3 data-[state=on]:border-primary data-[state=on]:bg-primary/10 data-[state=on]:text-primary aria-checked:border-primary aria-checked:bg-primary/10 aria-checked:text-primary">
-                  <FileSpreadsheet className="size-4" /> Excel (.xlsx)
-                </ToggleGroupItem>
-                <ToggleGroupItem value="csv" className="gap-1.5 px-3 data-[state=on]:border-primary data-[state=on]:bg-primary/10 data-[state=on]:text-primary aria-checked:border-primary aria-checked:bg-primary/10 aria-checked:text-primary">
-                  <FileText className="size-4" /> CSV
-                </ToggleGroupItem>
-              </ToggleGroup>
+                onChange={setFormat}
+                options={[
+                  { value: 'xlsx', label: 'Excel', icon: FileSpreadsheet, title: 'Excel workbook (.xlsx)' },
+                  { value: 'csv', label: 'CSV', icon: FileText, title: 'Comma-separated values (.csv)' },
+                ]}
+              />
             </div>
-            <div className={cn('flex items-center gap-2.5 pb-1.5', format !== 'xlsx' && 'opacity-45')}>
-              <Switch id="split" checked={split && format === 'xlsx'} onCheckedChange={setSplit} disabled={format !== 'xlsx'} />
-              <Label htmlFor="split" className="font-normal">
+            <div className={cn('flex items-center gap-2', format !== 'xlsx' && 'opacity-45')}>
+              <Switch id="split" size="sm" checked={split && format === 'xlsx'} onCheckedChange={setSplit} disabled={format !== 'xlsx'} />
+              <Label htmlFor="split" className="text-[0.8125rem] font-normal">
                 One sheet per category
               </Label>
             </div>
           </section>
 
           {/* Columns */}
-          <section className="space-y-3">
-            <div className="flex items-baseline justify-between gap-3">
-              <h3 className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">Columns</h3>
+          <section className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <SectionLabel>Columns</SectionLabel>
               <span className="text-xs text-muted-foreground tabular">
-                {orderedIds.length} of {COLUMNS.length} selected
+                {orderedIds.length} of {COLUMNS.length}
               </span>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {EXPORT_PRESETS.map((p) => (
-                <Button
-                  key={p.id}
-                  type="button"
-                  size="sm"
-                  variant={activePreset === p.id ? 'default' : 'outline'}
-                  onClick={() => setChosen(new Set(p.columns))}
-                  title={p.description}
-                >
-                  {p.label}
-                </Button>
-              ))}
-              <Button type="button" size="sm" variant="ghost" onClick={() => setChosen(new Set())}>
+            <div className="flex flex-wrap gap-1.5">
+              {EXPORT_PRESETS.map((p) => {
+                const on = activePreset === p.id
+                return (
+                  <Button
+                    key={p.id}
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    aria-pressed={on}
+                    onClick={() => setChosen(new Set(p.columns))}
+                    title={p.description}
+                    className={cn('h-7 rounded-full px-3 text-xs', on && 'border-foreground/30 bg-accent text-foreground')}
+                  >
+                    {on && <Check className="size-3" />}
+                    {p.label}
+                  </Button>
+                )
+              })}
+              <Button type="button" size="sm" variant="ghost" className="h-7 rounded-full px-3 text-xs text-muted-foreground" onClick={() => setChosen(new Set())}>
                 Clear
               </Button>
             </div>
-            <div className="divide-y rounded-lg border bg-card">
+            <div className="scrollbar-thin max-h-[min(42svh,22rem)] overflow-y-auto rounded-xl border bg-card">
               {groups.map(({ group, cols }) => {
                 const ids = cols.map((c) => c.id)
                 const n = ids.filter((id) => chosen.has(id)).length
                 return (
-                  <div key={group} className="px-3.5 py-3">
+                  <div key={group} className="border-b px-3.5 py-3 last:border-b-0">
                     <div className="mb-2 flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium">
-                        {GROUP_LABEL[group]}{' '}
-                        <span className="font-normal text-muted-foreground tabular">
+                      <SectionLabel className="flex items-center gap-1.5">
+                        {GROUP_LABEL[group]}
+                        <span className="font-medium tracking-normal normal-case tabular">
                           {n}/{ids.length}
                         </span>
-                      </p>
-                      <div className="flex gap-1">
-                        <Button type="button" size="xs" variant="ghost" onClick={() => setGroup(ids, true)} disabled={n === ids.length}>
+                      </SectionLabel>
+                      <div className="flex gap-0.5">
+                        <Button type="button" size="xs" variant="ghost" className="h-6 px-1.5 text-[0.625rem]" onClick={() => setGroup(ids, true)} disabled={n === ids.length}>
                           All
                         </Button>
-                        <Button type="button" size="xs" variant="ghost" onClick={() => setGroup(ids, false)} disabled={n === 0}>
+                        <Button type="button" size="xs" variant="ghost" className="h-6 px-1.5 text-[0.625rem]" onClick={() => setGroup(ids, false)} disabled={n === 0}>
                           None
                         </Button>
                       </div>
                     </div>
-                    <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                    <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
                       {cols.map((c) => (
-                        <div key={c.id} className="flex items-center gap-2.5">
+                        <label
+                          key={c.id}
+                          htmlFor={`col-${c.id}`}
+                          className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-[0.8125rem] transition-colors hover:bg-accent/60"
+                        >
                           <Checkbox id={`col-${c.id}`} checked={chosen.has(c.id)} onCheckedChange={(v) => toggle(c.id, v === true)} />
-                          <Label htmlFor={`col-${c.id}`} className="truncate font-normal">
-                            {c.label}
-                          </Label>
-                        </div>
+                          <span className="truncate">{c.label}</span>
+                        </label>
                       ))}
                     </div>
                   </div>
@@ -294,27 +302,28 @@ export function ExportDialog({ open, onOpenChange, filteredRows, selectedRows, a
 
           {/* File name */}
           <section className="space-y-2">
-            <Label htmlFor="export-name" className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+            <Label htmlFor="export-name" className="text-[0.625rem] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
               File name
             </Label>
-            <div className="flex items-center rounded-lg border bg-card pr-3 focus-within:ring-3 focus-within:ring-ring/50">
+            <div className="flex items-center rounded-lg border bg-background pr-3 shadow-[var(--shadow-hairline)] focus-within:ring-2 focus-within:ring-ring">
               <Input
                 id="export-name"
                 value={fileName}
                 onChange={(e) => setFileName(e.target.value)}
-                className="border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent"
+                className="h-9 border-0 bg-transparent text-[0.8125rem] shadow-none focus-visible:ring-0 dark:bg-transparent"
               />
-              <span className="font-mono text-sm text-muted-foreground">.{format}</span>
+              <span className="text-[0.8125rem] text-muted-foreground">.{format}</span>
             </div>
           </section>
         </div>
 
-        <DialogFooter className="mx-0 mb-0 items-center gap-3 px-5 py-3.5 sm:justify-between">
+        <div className="flex flex-col-reverse items-stretch gap-3 border-t bg-muted/40 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-muted-foreground tabular">
-            {rows.length.toLocaleString()} rows × {orderedIds.length} columns
+            <span className="font-medium text-foreground">{rows.length.toLocaleString()}</span> rows ×{' '}
+            <span className="font-medium text-foreground">{orderedIds.length}</span> columns
           </p>
           <div className="flex flex-col-reverse gap-2 sm:flex-row">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
               Cancel
             </Button>
             <Button type="button" onClick={run} disabled={busy || !orderedIds.length || !rows.length}>
@@ -322,7 +331,7 @@ export function ExportDialog({ open, onOpenChange, filteredRows, selectedRows, a
               {busy ? 'Building…' : `Export ${format === 'xlsx' ? 'Excel' : 'CSV'}`}
             </Button>
           </div>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   )
