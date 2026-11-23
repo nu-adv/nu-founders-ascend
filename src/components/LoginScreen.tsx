@@ -83,12 +83,10 @@ export function LoginScreen({ onUnlock }: { onUnlock: (data: FoundersData) => vo
           animate={shake}
           className="rounded-2xl border bg-surface p-7 shadow-[var(--shadow-float)]"
         >
-          <div className="flex items-center gap-3">
-            <BrandMark className="size-9 rounded-[0.65rem] text-lg" />
-            <div className="min-w-0 leading-tight">
-              <h1 className="text-xl font-semibold tracking-tight">Founders × ascend</h1>
-              <p className="text-[0.8125rem] text-muted-foreground">Advancement Research · private workspace</p>
-            </div>
+          <div className="flex flex-col items-center text-center">
+            <BrandMark className="size-16 rounded-2xl shadow-[0_6px_16px_-6px_rgb(0_0_0/0.25)]" imgClassName="scale-[1.06]" />
+            <h1 className="mt-4 text-xl font-semibold tracking-tight">Founders × ascend</h1>
+            <p className="mt-0.5 text-[0.8125rem] text-muted-foreground">Northeastern University · Advancement Research</p>
           </div>
 
           {restoring ? (

@@ -7,6 +7,7 @@ import { copyText } from '@/lib/prefs'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { spring } from './motion'
+import nuLogo from '@/assets/northeastern-n.png'
 
 /* ───────────── Chips & badges ───────────── */
 
@@ -327,17 +328,16 @@ export function EmptyState({ icon: Icon, title, body, action }: { icon: typeof C
   )
 }
 
-/** Brand mark: the red tile used in the sidebar and login. */
-export function BrandMark({ className }: { className?: string }) {
+/** Northeastern University logo on a white tile, so it reads on light and dark surfaces. */
+export function BrandMark({ className, imgClassName }: { className?: string; imgClassName?: string }) {
   return (
     <span
       className={cn(
-        'grid size-7 shrink-0 place-items-center rounded-[0.55rem] bg-brand text-[0.95rem] font-bold tracking-tight text-brand-foreground shadow-[inset_0_-1px_0_rgb(0_0_0/0.18),0_1px_2px_rgb(0_0_0/0.12)]',
+        'grid size-7 shrink-0 place-items-center overflow-hidden rounded-[0.55rem] bg-white shadow-[0_1px_2px_rgb(0_0_0/0.08)] ring-1 ring-black/[0.06] dark:ring-white/10',
         className,
       )}
-      aria-hidden
     >
-      N
+      <img src={nuLogo} alt="Northeastern University" draggable={false} className={cn('size-full scale-[1.32] object-contain select-none', imgClassName)} />
     </span>
   )
 }
