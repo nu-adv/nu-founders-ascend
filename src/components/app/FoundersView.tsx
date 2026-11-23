@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Kbd, PanelHeader, Segmented } from '@/components/kit/primitives'
 import { StatusIcon } from '@/components/kit/StatusIcon'
-import { panelIn, springSoft } from '@/components/kit/motion'
+import { panelIn } from '@/components/kit/motion'
 import { GroupedList, visualOrder } from './GroupedList'
 import { ActiveFilters, FilterMenu } from './FilterMenu'
 import { DisplayMenu } from './DisplayMenu'
@@ -24,7 +24,7 @@ const CAT_ICON = {
 
 export function FoundersView({ isDesktop, compact }: { isDesktop: boolean; compact: boolean }) {
   const s = useStore()
-  const { route, rows, base, search, setSearch, groupBy, byId, open, activeId, setActiveId, selected, setSelected, ui, setUi, go } = s
+  const { route, rows, base, search, setSearch, groupBy, byId, open, activeId, setActiveId, ui, setUi, go } = s
   const [collapsedArr, setCollapsedArr] = usePersistentState<string[]>('collapsed.v1', [])
   const collapsed = useMemo(() => new Set(collapsedArr), [collapsedArr])
   const order = useMemo(() => visualOrder(rows, groupBy, collapsed), [rows, groupBy, collapsed])
@@ -52,7 +52,6 @@ export function FoundersView({ isDesktop, compact }: { isDesktop: boolean; compa
           if (search) setSearch('')
           else searchRef.current?.blur()
         } else if (route.openId) open(null)
-        else if (selected.size) setSelected(new Set())
         return
       }
       if (typing || e.metaKey || e.ctrlKey || e.altKey) return
@@ -67,13 +66,6 @@ export function FoundersView({ isDesktop, compact }: { isDesktop: boolean; compa
         step(-1)
       } else if (e.key === 'Enter' && activeId) {
         open(activeId)
-      } else if (e.key === 'x' && activeId) {
-        setSelected((p) => {
-          const n = new Set(p)
-          if (n.has(activeId)) n.delete(activeId)
-          else n.add(activeId)
-          return n
-        })
       }
     }
     window.addEventListener('keydown', onKey)
@@ -157,27 +149,6 @@ export function FoundersView({ isDesktop, compact }: { isDesktop: boolean; compa
           collapsed={collapsed}
           onToggleGroup={(k) => setCollapsedArr((p) => (p.includes(k) ? p.filter((x) => x !== k) : [...p, k]))}
         />
-
-        {/* floating selection bar */}
-        <AnimatePresence>
-          {selected.size > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 16, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.98 }}
-              transition={springSoft}
-              className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-xl border bg-popover p-1 pl-3 text-sm shadow-[var(--shadow-float)]"
-            >
-              <span className="pr-2 font-medium tabular">{selected.size} selected</span>
-              <Button size="sm" className="h-7 gap-1.5 rounded-lg text-xs" onClick={() => setUi({ exportOpen: true })}>
-                <Download className="size-3.5" /> Export
-              </Button>
-              <Button size="sm" variant="ghost" className="h-7 rounded-lg text-xs" onClick={() => setSelected(new Set())}>
-                Clear
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* desktop peek panel */}
         {isDesktop && (

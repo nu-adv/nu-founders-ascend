@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Download, Keyboard, LayoutGrid, Lock, Menu, Search } from 'lucide-react'
+import { Download, Keyboard, LayoutGrid, Lock, Menu, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react'
 import { useStore, type CategoryRoute } from '@/lib/store'
+import { usePersistentState } from '@/lib/prefs'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -9,7 +11,7 @@ import { ExportDialog } from '@/components/ExportDialog'
 import { ShortcutsDialog } from '@/components/ShortcutsDialog'
 import { Overview } from '@/components/views/Overview'
 import { BrandMark, IconButton, Kbd, Panel, PanelHeader } from '@/components/kit/primitives'
-import { ease } from '@/components/kit/motion'
+import { ease, springSoft } from '@/components/kit/motion'
 import { Sidebar } from './Sidebar'
 import { FoundersView } from './FoundersView'
 import { CommandMenu } from './CommandMenu'
@@ -32,7 +34,9 @@ export function AppShell() {
   const isDesktop = useMedia('(min-width: 1024px)')
   const compact = !useMedia('(min-width: 768px)')
   const s = useStore()
-  const { route, ui, setUi, go, founders, selected, rows, decisions, generated, lock } = s
+  const { route, ui, setUi, go, founders, rows, decisions, generated, lock } = s
+  const [sidebarOpen, setSidebarOpen] = usePersistentState<boolean>('sidebar.v2', true)
+  const showSidebar = isDesktop && sidebarOpen
   const gPressed = useRef(0)
 
   // global shortcuts
@@ -52,28 +56,45 @@ export function AppShell() {
         if (e.key === 'f') return go('founders', 'all')
         if (e.key === 'r') return go('founders', 'review')
       }
-      if (e.key === 'g') gPressed.current = Date.now()
+      if (e.key === '[') setSidebarOpen((v) => !v)
+      else if (e.key === 'g') gPressed.current = Date.now()
       else if (e.key === '?') setUi({ shortcutsOpen: true })
       else if (e.key === 'e') setUi({ exportOpen: true })
       else if (['1', '2', '3', '4'].includes(e.key)) go('founders', CATS[Number(e.key) - 1])
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [ui, setUi, go])
+  }, [ui, setUi, go, setSidebarOpen])
 
-  const selectedRows = useMemo(() => founders.filter((f) => selected.has(f.id)), [founders, selected])
 
   return (
     <div className="flex h-dvh overflow-hidden bg-canvas text-foreground">
       {isDesktop && (
-        <aside className="w-60 shrink-0" aria-label="Navigation">
-          <Sidebar />
-        </aside>
+        <motion.aside
+          initial={false}
+          animate={{ width: sidebarOpen ? 240 : 0, opacity: sidebarOpen ? 1 : 0 }}
+          transition={springSoft}
+          className="shrink-0 overflow-hidden"
+          aria-label="Navigation"
+          aria-hidden={!sidebarOpen}
+        >
+          <div className="h-full w-60">
+            <Sidebar />
+          </div>
+        </motion.aside>
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* top bar */}
-        <header className="flex h-12 shrink-0 items-center gap-2 px-2 lg:pr-2 lg:pl-0">
+        <header className={cn('flex h-12 shrink-0 items-center gap-2 px-2', showSidebar && 'lg:pl-0')}>
+          {isDesktop && (
+            <div className="flex items-center gap-1.5">
+              <IconButton label={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'} shortcut="[" onClick={() => setSidebarOpen(!sidebarOpen)}>
+                {sidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
+              </IconButton>
+              {!sidebarOpen && <BrandMark className="size-6" />}
+            </div>
+          )}
           {!isDesktop && (
             <>
               <IconButton label="Menu" onClick={() => setUi({ navOpen: true })}>
@@ -103,7 +124,7 @@ export function AppShell() {
           </div>
         </header>
 
-        <main className="flex min-h-0 flex-1 px-2 pb-2 lg:pl-0">
+        <main className={cn('flex min-h-0 flex-1 px-2 pb-2', showSidebar && 'lg:pl-0')}>
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={route.view}
@@ -155,7 +176,7 @@ export function AppShell() {
         open={ui.exportOpen}
         onOpenChange={(o) => setUi({ exportOpen: o })}
         filteredRows={rows}
-        selectedRows={selectedRows}
+        selectedRows={[]}
         allRows={founders}
         decisions={decisions}
       />

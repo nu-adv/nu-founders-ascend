@@ -25,13 +25,12 @@ const GROUPS: { title: string; rows: Row[] }[] = [
       { keys: [['K'], ['↑']], label: 'Previous founder' },
       { keys: [['↵']], label: 'Open details' },
       { keys: [['Esc']], label: 'Close details / clear search' },
-      { keys: [['X']], label: 'Select row' },
-      { keys: [['Shift', 'X']], label: 'Select a range' },
     ],
   },
   {
     title: 'Navigate',
     rows: [
+      { keys: [['[']], label: 'Show or hide the sidebar' },
       { keys: [['G', 'O']], label: 'Go to Overview' },
       { keys: [['G', 'F']], label: 'Go to Founders' },
       { keys: [['1'], ['2'], ['3'], ['4']], label: 'All · In ascend · Needs review · Not in ascend' },

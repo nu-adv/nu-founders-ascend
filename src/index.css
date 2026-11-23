@@ -217,6 +217,12 @@
       transparent 1px 10px
     );
   }
+  /* long names fade out under the next column instead of an ellipsis */
+  .fade-end {
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
   .text-balance {
     text-wrap: balance;
   }

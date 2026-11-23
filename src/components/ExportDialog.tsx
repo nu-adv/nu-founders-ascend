@@ -146,7 +146,7 @@ export function ExportDialog({ open, onOpenChange, filteredRows, selectedRows, a
 
   const scopes: { id: Scope; label: string; count: number; icon: typeof Rows3; hint: string }[] = [
     { id: 'view', label: 'Current view', count: filteredRows.length, icon: Rows3, hint: 'Matching your filters' },
-    { id: 'selected', label: 'Selected', count: selectedRows.length, icon: SquareCheck, hint: 'Rows you ticked' },
+    ...(selectedRows.length ? [{ id: 'selected' as Scope, label: 'Selected', count: selectedRows.length, icon: SquareCheck, hint: 'Rows you ticked' }] : []),
     { id: 'all', label: 'Everything', count: allRows.length, icon: Users, hint: 'All founders' },
   ]
 
@@ -169,7 +169,7 @@ export function ExportDialog({ open, onOpenChange, filteredRows, selectedRows, a
           {/* Rows */}
           <section className="space-y-2">
             <SectionLabel>Rows</SectionLabel>
-            <div role="radiogroup" aria-label="Rows to export" className="grid gap-2 sm:grid-cols-3">
+            <div role="radiogroup" aria-label="Rows to export" className={cn("grid gap-2", scopes.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
               {scopes.map((s) => {
                 const disabled = s.count === 0
                 const active = scope === s.id
