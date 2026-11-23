@@ -6,6 +6,8 @@ final_classification.json (written by the Excel builder). Output is plaintext co
 private/ (git-ignored). Run `npm run encrypt` afterwards to produce the encrypted public/data/vault.json.
 """
 import json, os, re, sys
+FETCH = '--fetch-logos' in sys.argv
+sys.argv = [a for a in sys.argv if a != '--fetch-logos']
 
 D = sys.argv[1]
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -97,7 +99,108 @@ def ascend_block(b):
             "addresses": det.get("addresses", []) or ([b["address"]] if b.get("address") else []),
             "otherNames": det.get("other_names", [])}
 
+
+GENERIC_MAIL = re.compile(r"gmail|yahoo|hotmail|outlook|aol|icloud|me\.com|comcast|msn|live\.com|verizon|att\.net|protonmail|northeastern\.edu|neu\.edu|mac\.com|ymail")
+
+def domain_of(u):
+    u = (u or "").strip().lower()
+    if not u:
+        return ""
+    u = re.sub(r"^[a-z]+://", "", u)
+    u = re.sub(r"^www\.", "", u)
+    u = u.split("/")[0].split("?")[0].split(":")[0]
+    return u if "." in u and " " not in u else ""
+
+def company_domain(pbs, webs, emails):
+    for p in pbs:
+        d = domain_of(p.get("companyWebsite"))
+        if d:
+            return d
+    for w in webs:
+        d = domain_of(w.get("website"))
+        if d:
+            return d
+    for e in emails:
+        d = e.split("@")[-1].lower()
+        if d and not GENERIC_MAIL.search(d):
+            return d
+    return ""
+
+def degree_label(ascend_degree):
+    d = (ascend_degree or "").lower()
+    if not d:
+        return ""
+    if "business admin" in d and ("master" in d or "mba" in d):
+        return "MBA"
+    if "philosophy" in d or d.startswith("ph"):
+        return "PhD"
+    if "juris" in d or d.startswith("jd"):
+        return "JD"
+    if d.startswith("b") or "bachelor" in d:
+        return "Bachelor's"
+    if d.startswith("m") or "master" in d:
+        return "Master's"
+    if "doctor" in d:
+        return "Doctorate"
+    if "certificate" in d:
+        return "Certificate"
+    return ascend_degree
+
+# ---------- logos ----------
+LOGO_CACHE = os.path.join(ROOT, "private", "logo_cache")
+website_logos = {}
+_wl = os.path.join(D, "website_logos.json")
+if os.path.exists(_wl):
+    website_logos = {x["id"]: x["logo"] for x in json.load(open(_wl)) if (x.get("logo") or "").startswith("data:image")}
+
+website_photos = {}
+_wp = os.path.join(D, "website_photos.json")
+if os.path.exists(_wp):
+    website_photos = {x["id"]: x["photo"] for x in json.load(open(_wp)) if (x.get("photo") or "").startswith("data:image")}
+
+def fetch_favicon(domain):
+    """Free Google favicon service; cached on disk; resized to 64px PNG. Returns data URI or ''."""
+    import base64, subprocess, urllib.request
+    os.makedirs(LOGO_CACHE, exist_ok=True)
+    path = os.path.join(LOGO_CACHE, re.sub(r"[^a-z0-9.-]", "_", domain) + ".png")
+    miss = path + ".miss"
+    if not os.path.exists(path) and not os.path.exists(miss):
+        try:
+            req = urllib.request.Request(f"https://www.google.com/s2/favicons?domain={domain}&sz=128", headers={"User-Agent": "Mozilla/5.0 (logo prefetch)"})
+            with urllib.request.urlopen(req, timeout=15) as r:
+                body = r.read()
+            open(path, "wb").write(body)
+            # small icons (<32px) are generic or too blurry to use
+            w = subprocess.run(["sips", "-g", "pixelWidth", path], capture_output=True, text=True).stdout
+            if int((re.findall(r"pixelWidth: (\d+)", w) or ["0"])[0]) < 32:
+                os.remove(path); open(miss, "w").close()
+            else:
+                subprocess.run(["sips", "-Z", "64", path], capture_output=True)
+        except Exception:
+            open(miss, "w").close()
+    if os.path.exists(path):
+        return "data:image/png;base64," + base64.b64encode(open(path, "rb").read()).decode()
+    return ""
+
 CATEGORY = {"CONFIRMED": "in_ascend", "NOT FOUND": "not_found"}
+logos, domain_logo = {}, {}
+if FETCH:  # parallel prefetch of favicons for companies without a founders-site logo
+    from concurrent.futures import ThreadPoolExecutor
+    want = set()
+    for e in final:
+        recs = [r for pid in [e["pid"]] + e.get("alias_pids", []) for r in people[pid]["records"]]
+        pbs_ = [pitchbook_block(r) for r in recs if r["src"] == "PitchBook"]
+        webs_ = [website_block(r) for r in recs if r["src"] == "Website"]
+        if any(w["id"] in website_logos for w in webs_):
+            continue
+        em = [x for p_ in pbs_ for x in [p_["email"]] if x] + [x for w in webs_ for x in w["emails"]]
+        d = company_domain(pbs_, webs_, em)
+        if d:
+            want.add(d)
+    print(f"prefetching {len(want)} favicons…", flush=True)
+    with ThreadPoolExecutor(12) as ex:
+        got = sum(1 for uri in ex.map(fetch_favicon, sorted(want)) if uri)
+    print(f"  {got} usable logos", flush=True)
 out = []
 for e in final:
     pids = [e["pid"]] + e.get("alias_pids", [])
@@ -113,6 +216,33 @@ for e in final:
             emails.append(x)
     b = e.get("best")
     ev = (b or {}).get("evidence", {})
+    dom = company_domain(pbs, webs, emails)
+    logo_key = ""
+    for w in webs:
+        if w["id"] in website_logos:
+            logo_key = f"w{w['id']}"
+            logos[logo_key] = website_logos[w["id"]]
+            break
+    if not logo_key and dom:
+        if dom in domain_logo:
+            logo_key = domain_logo[dom]
+        elif FETCH or os.path.exists(os.path.join(LOGO_CACHE, re.sub(r"[^a-z0-9.-]", "_", dom) + ".png")):
+            uri = fetch_favicon(dom)
+            if uri:
+                logo_key = f"d:{dom}"
+                logos[logo_key] = uri
+                domain_logo[dom] = logo_key
+    photo_key = ""
+    for w in webs:
+        if w["id"] in website_photos:
+            photo_key = f"p{w['id']}"
+            logos[photo_key] = website_photos[w["id"]]
+            break
+    ne_degree, ne_class, ne_src = (wb or {}).get("degreeShort", ""), (wb or {}).get("classOf", ""), "website" if wb else ""
+    if not ne_degree and b:
+        ne_degree = degree_label(b.get("degree", ""))
+        ne_class = f"Class of {b['degree_year']}" if b.get("degree_year") else ""
+        ne_src = "ascend" if ne_degree or ne_class else ""
     status = e["status"]
     out.append({
         "id": f"F{e['pid']:04d}",
@@ -128,6 +258,9 @@ for e in final:
         "location": (pb or {}).get("location") or (wb or {}).get("basedIn", ""),
         "degree": (wb or {}).get("degreeShort", ""), "classOf": (wb or {}).get("classOf", ""), "field": (wb or {}).get("field", ""),
         "tier": (wb or {}).get("tier", ""), "sector": (wb or {}).get("sector", ""), "funding": (wb or {}).get("funding", ""),
+        "stage": (wb or {}).get("stage", "") or (pb or {}).get("companyType", ""), "hq": (wb or {}).get("hq", ""),
+        "staff": (wb or {}).get("employees", ""), "domain": dom, "logo": logo_key, "photo": photo_key,
+        "neDegree": ne_degree, "neClass": ne_class, "neSource": ne_src,
         "pitchbook": pbs, "website": webs,
         "ascend": ascend_block(b),
         "evidence": [{"kind": k, "label": EV_LABEL.get(k, k), "text": ev[k]} for k in EV_ORDER if k in ev],
@@ -139,8 +272,17 @@ for e in final:
         "note": e.get("note", ""), "searches": e.get("searches", []),
     })
 
+NOT_ON_RECORD = {"not on record", "—", "-", "n/a", "none", "unknown"}
+for r in out:
+    for k in ("funding", "staff", "hq", "stage", "sector"):
+        if str(r.get(k, "")).strip().lower() in NOT_ON_RECORD:
+            r[k] = ""
 out.sort(key=lambda r: ({"in_ascend": 0, "review": 1, "not_found": 2}[r["category"]], r["last"].lower(), r["first"].lower()))
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 json.dump({"generated": __import__("datetime").date.today().isoformat(), "founders": out}, open(OUT, "w"))
+json.dump(logos, open(os.path.join(ROOT, "private", "logos.json"), "w"))
+print(f"photos: {sum(1 for r in out if r['photo'])} founders")
+print(f"logos: {len(logos)} images for {sum(1 for r in out if r['logo'])} founders "
+      f"({sum(1 for k in logos if k.startswith('w'))} from the founders site, {sum(1 for k in logos if k.startswith('d:'))} favicons)")
 from collections import Counter
 print(len(out), "founders ->", OUT, dict(Counter(r["category"] for r in out)), f"{os.path.getsize(OUT)/1e6:.1f} MB")

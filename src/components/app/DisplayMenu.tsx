@@ -1,22 +1,22 @@
 import { ArrowDownNarrowWide, ArrowUpNarrowWide, SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { COLUMNS, DEFAULT_LIST_COLUMNS } from '@/lib/columns'
-import { useStore, type GroupBy } from '@/lib/store'
+import { useStore, type Density, type GroupBy } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Segmented, SectionLabel } from '@/components/kit/primitives'
 
-const SORTABLE = ['name', 'last', 'company', 'constituentId', 'householdId', 'location', 'tier', 'funding', 'ascendYear', 'status']
+const SORTABLE = ['name', 'last', 'company', 'funding', 'staff', 'northeastern', 'sector', 'hq', 'tier', 'constituentId', 'status']
 
 export function DisplayMenu() {
-  const { groupBy, setGroupBy, sort, setSort, listColumns, setListColumns } = useStore()
+  const { groupBy, setGroupBy, sort, setSort, listColumns, setListColumns, density, setDensity } = useStore()
   const listable = COLUMNS.filter((c) => c.inList && c.id !== 'name')
   const groups = [...new Set(listable.map((c) => c.group))]
   const toggleCol = (id: string) => {
-    const next = listColumns.includes(id) ? listColumns.filter((x) => x !== id) : [...listColumns, id]
-    setListColumns(COLUMNS.map((c) => c.id).filter((cid) => next.includes(cid)))
+    // keep the user's own order; new columns go to the end
+    setListColumns(listColumns.includes(id) ? listColumns.filter((x) => x !== id) : [...listColumns, id])
   }
   return (
     <Popover>
@@ -40,6 +40,19 @@ export function DisplayMenu() {
                 { value: 'source', label: 'Source' },
                 { value: 'tier', label: 'Tier' },
                 { value: 'none', label: 'None' },
+              ]}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[0.8125rem] text-muted-foreground">Density</span>
+            <Segmented<Density>
+              id="density"
+              size="sm"
+              value={density}
+              onChange={setDensity}
+              options={[
+                { value: 'comfortable', label: 'Comfortable' },
+                { value: 'compact', label: 'Compact' },
               ]}
             />
           </div>
@@ -72,7 +85,7 @@ export function DisplayMenu() {
         </div>
         <div className="scrollbar-thin max-h-[min(50vh,380px)] space-y-3 overflow-y-auto p-3">
           <div className="flex items-center justify-between">
-            <SectionLabel>Columns</SectionLabel>
+            <SectionLabel>Columns <span className="font-normal tracking-normal normal-case text-muted-foreground/70">· drag headers to reorder</span></SectionLabel>
             <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setListColumns(DEFAULT_LIST_COLUMNS)}>
               Reset
             </button>

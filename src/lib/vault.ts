@@ -1,7 +1,9 @@
 import type { FoundersData } from '@/lib/types'
 
 /**
- * The founder data ships only as public/data/vault.json: gzip -> AES-256-GCM, key from PBKDF2-SHA256.
+ * Data ships only as encrypted files in public/data/: gzip -> AES-256-GCM, key from PBKDF2-SHA256.
+ *   vault.json  founders (needed to unlock)
+ *   logos.json  company logos, loaded in the background after unlock
  * The password is never stored in the code; a wrong password simply fails AES-GCM authentication.
  */
 interface VaultFile {
@@ -28,32 +30,31 @@ async function gunzip(bytes: ArrayBuffer): Promise<string> {
   return await new Response(stream).text()
 }
 
-let vaultCache: Promise<VaultFile> | null = null
+const fileCache = new Map<string, Promise<VaultFile | null>>()
 
-async function loadVault(): Promise<VaultFile> {
-  if (!vaultCache) {
-    vaultCache = fetch(`${import.meta.env.BASE_URL}data/vault.json`, { cache: 'no-store' })
+function loadFile(name: string, optional = false): Promise<VaultFile | null> {
+  let p = fileCache.get(name)
+  if (!p) {
+    p = fetch(`${import.meta.env.BASE_URL}data/${name}`, { cache: 'no-store' })
       .then(async (res) => {
+        if (optional && res.status === 404) return null
         if (!res.ok) throw new Error(`Could not load the data file (HTTP ${res.status}).`)
         return (await res.json()) as VaultFile
       })
       .catch((err: unknown) => {
-        vaultCache = null
+        fileCache.delete(name)
         throw err instanceof Error ? err : new Error('Could not load the data file.')
       })
+    fileCache.set(name, p)
   }
-  return vaultCache
+  return p
 }
 
-export async function unlockVault(password: string): Promise<FoundersData> {
-  if (!globalThis.crypto?.subtle) {
-    throw new Error('This browser cannot decrypt the data (Web Crypto is unavailable). Open the site over https.')
-  }
-  const vault = await loadVault()
+async function decrypt(file: VaultFile, password: string): Promise<string> {
   const enc = new TextEncoder()
   const baseKey = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey'])
   const key = await crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt: fromBase64(vault.salt), iterations: vault.iter, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt: fromBase64(file.salt), iterations: file.iter, hash: 'SHA-256' },
     baseKey,
     { name: 'AES-GCM', length: 256 },
     false,
@@ -61,15 +62,40 @@ export async function unlockVault(password: string): Promise<FoundersData> {
   )
   let plain: ArrayBuffer
   try {
-    plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromBase64(vault.iv) }, key, fromBase64(vault.data))
+    plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromBase64(file.iv) }, key, fromBase64(file.data))
   } catch (err) {
     if (err instanceof DOMException && err.name === 'OperationError') throw new Error('WRONG_PASSWORD')
     throw new Error('The data could not be decrypted.')
   }
+  return gunzip(plain)
+}
+
+let unlockedWith: string | null = null
+
+export async function unlockVault(password: string): Promise<FoundersData> {
+  if (!globalThis.crypto?.subtle) {
+    throw new Error('This browser cannot decrypt the data (Web Crypto is unavailable). Open the site over https.')
+  }
+  const vault = (await loadFile('vault.json'))!
+  const text = await decrypt(vault, password)
   try {
-    return JSON.parse(await gunzip(plain)) as FoundersData
+    const data = JSON.parse(text) as FoundersData
+    unlockedWith = password
+    return data
   } catch {
     throw new Error('The data file is damaged or in an unexpected format.')
+  }
+}
+
+/** Company logos (key -> data URI). Resolves to {} if the file is missing or anything fails. */
+export async function loadLogos(): Promise<Record<string, string>> {
+  if (!unlockedWith) return {}
+  try {
+    const file = await loadFile('logos.json', true)
+    if (!file) return {}
+    return JSON.parse(await decrypt(file, unlockedWith)) as Record<string, string>
+  } catch {
+    return {}
   }
 }
 
@@ -102,6 +128,7 @@ export function getSavedPassword(): string | null {
 }
 
 export function clearSavedPassword(): void {
+  unlockedWith = null
   try {
     sessionStorage.removeItem(SESSION_KEY)
   } catch {

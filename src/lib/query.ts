@@ -67,6 +67,11 @@ export function buildSearchIndex(founders: Founder[]): Map<string, string> {
       ...f.emails,
       f.location,
       f.sector,
+      f.hq,
+      f.stage,
+      f.domain,
+      f.neDegree,
+      f.neClass,
       f.degree,
       f.classOf,
       f.field,
@@ -120,15 +125,18 @@ export function applyQuery(
   const col = COLUMN_BY_ID[sort.column]
   if (col) {
     const dir = sort.dir === 'asc' ? 1 : -1
-    const val = (f: Founder) =>
-      sort.column === 'status' ? String(STATUS_ORDER[f.status]) : col.value(f, decisions[f.id]).toLowerCase()
-    out.sort((a, b) => {
-      const va = val(a)
-      const vb = val(b)
-      if (!va && vb) return 1 // empties last regardless of direction
-      if (va && !vb) return -1
-      return va < vb ? -dir : va > vb ? dir : a.last.localeCompare(b.last)
+    const key = (f: Founder): number | string =>
+      sort.column === 'status' ? STATUS_ORDER[f.status] : col.sortValue ? col.sortValue(f) : col.value(f, decisions[f.id]).toLowerCase()
+    const empty = (v: number | string) => v === '' || v === -1
+    const keyed = out.map((f) => ({ f, k: key(f) }))
+    keyed.sort((a, b) => {
+      if (empty(a.k) && !empty(b.k)) return 1 // blanks last regardless of direction
+      if (!empty(a.k) && empty(b.k)) return -1
+      if (a.k < b.k) return -dir
+      if (a.k > b.k) return dir
+      return a.f.last.localeCompare(b.f.last)
     })
+    return keyed.map((x) => x.f)
   }
   return out
 }

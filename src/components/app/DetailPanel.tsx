@@ -25,6 +25,7 @@ import type { DecisionValue, Founder } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Avatar, Badge, Chip, CopyId, IconButton, Kbd, SectionLabel } from '@/components/kit/primitives'
 import { StatusIcon } from '@/components/kit/StatusIcon'
+import { CompanyLogo, FounderAvatar } from './visuals'
 import { ease } from '@/components/kit/motion'
 
 const EVIDENCE_ICON: Record<string, typeof Mail> = {
@@ -84,10 +85,17 @@ export function DetailPanel({ founder: f, onPrev, onNext, onClose, position }: P
         {/* identity */}
         <div className="px-5 pt-5 pb-4">
           <div className="flex items-start gap-3.5">
-            <Avatar name={f.name} size="lg" />
+            <FounderAvatar founder={f} size="lg" status={false} />
             <div className="min-w-0 flex-1">
               <h2 className="text-lg leading-snug font-semibold tracking-tight">{f.name}</h2>
-              <p className="text-[0.8125rem] text-muted-foreground">{[f.title, f.company].filter(Boolean).join(' · ') || '—'}</p>
+              <p className="text-[0.8125rem] text-muted-foreground">{f.title || '—'}</p>
+              {f.company && (
+                <p className="mt-1 flex items-center gap-1.5 text-[0.8125rem] text-foreground/85">
+                  <CompanyLogo founder={f} size="sm" />
+                  <span className="truncate">{f.company}</span>
+                  {f.stage && <span className="truncate text-muted-foreground">· {f.stage}</span>}
+                </p>
+              )}
               {f.aliases.length > 0 && <p className="mt-0.5 text-xs text-muted-foreground/80">Also listed as {f.aliases.join(', ')}</p>}
             </div>
           </div>
@@ -251,7 +259,7 @@ export function DetailPanel({ founder: f, onPrev, onNext, onClose, position }: P
             </Props>
             <div className="mt-3 rounded-lg border bg-muted/40 p-3">
               <div className="mb-2 flex items-center gap-2 text-[0.8125rem] font-medium">
-                <Building2 className="size-3.5 text-muted-foreground" /> {w.company}
+                <CompanyLogo founder={f} size="sm" /> {w.company}
                 {w.tier && <Chip tone={w.tier.endsWith('A') ? 'brand' : 'neutral'} className="ml-auto">{w.tier}</Chip>}
               </div>
               <Props dense>
@@ -270,7 +278,7 @@ export function DetailPanel({ founder: f, onPrev, onNext, onClose, position }: P
           </Section>
         ))}
         {f.pitchbook.map((p) => (
-          <Section key={p.row} title={`PitchBook · row ${p.row}`}>
+          <Section key={p.row} title="PitchBook">
             <Props>
               <Prop label="Position">{p.position}</Prop>
               <Prop label="Company">{p.company}</Prop>

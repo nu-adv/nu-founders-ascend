@@ -125,6 +125,18 @@ export interface Founder {
   tier: string
   sector: string
   funding: string
+  /** Funding stage (founders site) or PitchBook company type */
+  stage: string
+  hq: string
+  staff: string
+  domain: string
+  /** Keys into the encrypted images map ('' when missing) */
+  logo: string
+  photo: string
+  /** Northeastern degree / class, from the founders site or (fallback) ascend */
+  neDegree: string
+  neClass: string
+  neSource: '' | 'website' | 'ascend'
   pitchbook: PitchBookRecord[]
   website: WebsiteRecord[]
   ascend: AscendMatch | null

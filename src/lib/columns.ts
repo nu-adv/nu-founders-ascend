@@ -45,10 +45,23 @@ export interface ColumnDef {
   /** Excel column width in characters. */
   xlsxWidth: number
   mono?: boolean
+  /** Right-align (numbers). */
+  align?: 'right'
+  /** Value used for sorting when the text value would sort wrongly (numbers). */
+  sortValue?: (f: Founder) => number | string
   /** Can be shown as a column in the list view. */
   inList?: boolean
   /** Visible in the list view by default. */
   defaultVisible?: boolean
+}
+
+/** "$1.2B" -> 1.2e9, "$869M" -> 8.69e8, "3,131" -> 3131; unknown -> -1 so blanks sort last */
+export function parseAmount(v: string): number {
+  const m = (v || '').replace(/,/g, '').match(/([\d.]+)\s*([KMB])?/i)
+  if (!m) return -1
+  const n = parseFloat(m[1])
+  const mult = { K: 1e3, M: 1e6, B: 1e9 }[(m[2] || '').toUpperCase() as 'K' | 'M' | 'B'] ?? 1
+  return n * mult
 }
 
 const j = (xs: string[] | undefined, sep = '; ') => (xs ?? []).filter(Boolean).join(sep)
@@ -62,8 +75,9 @@ export const COLUMNS: ColumnDef[] = [
   { id: 'last', label: 'Last Name', group: 'Person', value: (f) => f.last, width: 140, xlsxWidth: 18, inList: true },
   { id: 'status', label: 'Match status', group: 'ascend', value: (f) => STATUS_LABEL[f.status], width: 120, xlsxWidth: 16, inList: true },
   // ascend IDs
-  { id: 'constituentId', label: 'Constituent ID', group: 'ascend', value: (f) => f.ascend?.constituentId ?? '', width: 132, xlsxWidth: 20, mono: true, inList: true, defaultVisible: true },
-  { id: 'householdId', label: 'Household ID', group: 'ascend', value: (f) => f.ascend?.householdId ?? '', width: 132, xlsxWidth: 20, mono: true, inList: true, defaultVisible: true },
+  { id: 'ascendIds', label: 'ascend IDs', group: 'ascend', value: (f) => [f.ascend?.constituentId, f.ascend?.householdId].filter(Boolean).join(' / '), sortValue: (f) => f.ascend?.constituentId ?? '', width: 124, xlsxWidth: 22, inList: true, defaultVisible: true },
+  { id: 'constituentId', label: 'Constituent ID', group: 'ascend', value: (f) => f.ascend?.constituentId ?? '', width: 132, xlsxWidth: 20, mono: true, inList: true },
+  { id: 'householdId', label: 'Household ID', group: 'ascend', value: (f) => f.ascend?.householdId ?? '', width: 132, xlsxWidth: 20, mono: true, inList: true },
   { id: 'householdName', label: 'Household', group: 'ascend', value: (f) => f.ascend?.householdName ?? '', width: 200, xlsxWidth: 26, inList: true },
   { id: 'ascendName', label: 'Name in ascend', group: 'ascend', value: (f) => f.ascend?.name ?? '', width: 220, xlsxWidth: 28, inList: true },
   { id: 'ascendType', label: 'Constituent type', group: 'ascend', value: (f) => f.ascend?.type ?? '', width: 140, xlsxWidth: 16, inList: true },
@@ -74,16 +88,19 @@ export const COLUMNS: ColumnDef[] = [
   { id: 'ascendEmails', label: 'ascend emails', group: 'ascend', value: (f) => j(f.ascend?.emails), width: 260, xlsxWidth: 40 },
   { id: 'ascendAddresses', label: 'ascend addresses', group: 'ascend', value: (f) => j(f.ascend?.addresses, ' | '), width: 300, xlsxWidth: 60 },
   { id: 'jobHistory', label: 'ascend job history', group: 'ascend', value: (f) => j(f.ascend?.jobHistory), width: 300, xlsxWidth: 50 },
-  { id: 'matchedOn', label: 'Matched on', group: 'ascend', value: (f) => f.evidence.map((e) => e.label).join(', '), width: 170, xlsxWidth: 30, inList: true, defaultVisible: true },
+  { id: 'matchedOn', label: 'Matched on', group: 'ascend', value: (f) => f.evidence.map((e) => e.label).join(', '), width: 170, xlsxWidth: 30, inList: true },
   { id: 'evidence', label: 'Why it matches', group: 'ascend', value: (f) => f.evidence.map((e) => `${e.label}: ${e.text}`).join('; '), width: 320, xlsxWidth: 70 },
   { id: 'contactUrl', label: 'ascend constituent link', group: 'ascend', value: (f) => f.ascend?.contactUrl ?? '', width: 260, xlsxWidth: 40 },
   { id: 'householdUrl', label: 'ascend household link', group: 'ascend', value: (f) => f.ascend?.householdUrl ?? '', width: 260, xlsxWidth: 40 },
   // Company & role
   { id: 'title', label: 'Title', group: 'Company', value: (f) => f.title, width: 240, xlsxWidth: 34, inList: true },
-  { id: 'company', label: 'Company', group: 'Company', value: (f) => f.company, width: 180, xlsxWidth: 28, inList: true, defaultVisible: true },
-  { id: 'tier', label: 'Tier', group: 'Company', value: (f) => f.tier, width: 90, xlsxWidth: 10, inList: true },
-  { id: 'sector', label: 'Sector', group: 'Company', value: (f) => f.sector, width: 180, xlsxWidth: 24, inList: true },
-  { id: 'funding', label: 'Funding', group: 'Company', value: (f) => f.funding, width: 100, xlsxWidth: 12, inList: true },
+  { id: 'company', label: 'Company', group: 'Company', value: (f) => f.company, width: 216, xlsxWidth: 28, inList: true, defaultVisible: true },
+  { id: 'stage', label: 'Stage', group: 'Company', value: (f) => f.stage, width: 150, xlsxWidth: 22, inList: true },
+  { id: 'sector', label: 'Sector', group: 'Company', value: (f) => f.sector, width: 156, xlsxWidth: 24, inList: true, defaultVisible: true },
+  { id: 'hq', label: 'HQ', group: 'Company', value: (f) => f.hq, width: 124, xlsxWidth: 20, inList: true, defaultVisible: true },
+  { id: 'staff', label: 'Staff', group: 'Company', value: (f) => f.staff, sortValue: (f) => parseAmount(f.staff), align: 'right', width: 64, xlsxWidth: 10, inList: true, defaultVisible: true },
+  { id: 'funding', label: 'Funding', group: 'Company', value: (f) => f.funding, sortValue: (f) => parseAmount(f.funding), align: 'right', width: 84, xlsxWidth: 12, inList: true, defaultVisible: true },
+  { id: 'tier', label: 'Tier', group: 'Company', value: (f) => f.tier, width: 76, xlsxWidth: 10, inList: true, defaultVisible: true },
   { id: 'companyType', label: 'Company type', group: 'Company', value: (f) => firstPb(f)?.companyType || firstWeb(f)?.companyType || '', width: 160, xlsxWidth: 20 },
   { id: 'companyWebsite', label: 'Company website', group: 'Company', value: (f) => firstPb(f)?.companyWebsite || firstWeb(f)?.website || '', width: 200, xlsxWidth: 28 },
   // Contact & location
@@ -91,10 +108,11 @@ export const COLUMNS: ColumnDef[] = [
   { id: 'allEmails', label: 'All source emails', group: 'Person', value: (f) => j(f.emails), width: 300, xlsxWidth: 50 },
   { id: 'phone', label: 'Phone', group: 'Person', value: (f) => firstPb(f)?.phone ?? '', width: 150, xlsxWidth: 18 },
   { id: 'linkedin', label: 'LinkedIn', group: 'Person', value: (f) => f.linkedin, width: 220, xlsxWidth: 36 },
-  { id: 'location', label: 'Location', group: 'Person', value: (f) => f.location, width: 150, xlsxWidth: 26, inList: true, defaultVisible: true },
+  { id: 'location', label: 'Location', group: 'Person', value: (f) => f.location, width: 150, xlsxWidth: 26, inList: true },
   { id: 'city', label: 'City', group: 'Person', value: (f) => f.city, width: 130, xlsxWidth: 16 },
   { id: 'state', label: 'State / Region', group: 'Person', value: (f) => f.state, width: 140, xlsxWidth: 18 },
   // Northeastern (from the website)
+  { id: 'northeastern', label: 'Northeastern', group: 'Northeastern', value: (f) => [f.neDegree, f.neClass].filter(Boolean).join(' · '), sortValue: (f) => f.neClass.match(/\d{4}/)?.[0] ?? '', width: 144, xlsxWidth: 24, inList: true, defaultVisible: true },
   { id: 'degree', label: 'Degree', group: 'Northeastern', value: (f) => f.degree, width: 120, xlsxWidth: 16, inList: true },
   { id: 'classOf', label: 'Class', group: 'Northeastern', value: (f) => f.classOf, width: 130, xlsxWidth: 16, inList: true },
   { id: 'field', label: 'Field of study', group: 'Northeastern', value: (f) => f.field, width: 220, xlsxWidth: 30, inList: true },
@@ -109,7 +127,8 @@ export const COLUMNS: ColumnDef[] = [
 
 export const COLUMN_BY_ID = Object.fromEntries(COLUMNS.map((c) => [c.id, c])) as Record<string, ColumnDef>
 
-export const DEFAULT_LIST_COLUMNS = COLUMNS.filter((c) => c.defaultVisible).map((c) => c.id)
+/** Default list order: founder-first like the Northeastern Founders site, then the ascend IDs. */
+export const DEFAULT_LIST_COLUMNS = ['name', 'northeastern', 'company', 'sector', 'hq', 'staff', 'funding', 'tier', 'ascendIds']
 
 /** Export presets shown in the export dialog. */
 export const EXPORT_PRESETS: { id: string; label: string; description: string; columns: string[] }[] = [

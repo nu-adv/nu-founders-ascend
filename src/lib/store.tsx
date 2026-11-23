@@ -3,9 +3,11 @@ import { EMPTY_FILTERS, applyQuery, buildSearchIndex, type Filters, type Sort } 
 import { usePersistentState } from './prefs'
 import { DEFAULT_LIST_COLUMNS } from './columns'
 import type { Category, Decision, Decisions, Founder, FoundersData } from './types'
+import { loadLogos } from './vault'
 
 export type View = 'overview' | 'founders'
 export type GroupBy = 'status' | 'source' | 'tier' | 'none'
+export type Density = 'comfortable' | 'compact'
 export type CategoryRoute = Category | 'all'
 
 interface Route {
@@ -57,6 +59,10 @@ interface Store {
   activeId: string | null
   setActiveId: (id: string | null) => void
   ui: { exportOpen: boolean; commandOpen: boolean; shortcutsOpen: boolean; navOpen: boolean }
+  /** Company logos + founder photos (data URIs), loaded after unlock */
+  media: Record<string, string>
+  density: Density
+  setDensity: (d: Density) => void
   setUi: (patch: Partial<Store['ui']>) => void
   lock: () => void
 }
@@ -77,9 +83,18 @@ export function StoreProvider({ data, onLock, children }: { data: FoundersData; 
   const [storedFilters, setStoredFilters] = usePersistentState<Filters>('filters.v2', EMPTY_FILTERS)
   const [sort, setSort] = usePersistentState<Sort>('sort.v2', { column: 'name', dir: 'asc' })
   const [groupBy, setGroupBy] = usePersistentState<GroupBy>('groupBy.v1', 'status')
-  const [listColumns, setListColumns] = usePersistentState<string[]>('columns.v2', DEFAULT_LIST_COLUMNS)
+  const [listColumns, setListColumns] = usePersistentState<string[]>('columns.v4', DEFAULT_LIST_COLUMNS)
   const [decisions, setDecisions] = usePersistentState<Decisions>('decisions.v1', {})
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [media, setMedia] = useState<Record<string, string>>({})
+  const [density, setDensity] = usePersistentState<Density>('density.v1', 'comfortable')
+  useEffect(() => {
+    let live = true
+    loadLogos().then((m) => live && setMedia(m))
+    return () => {
+      live = false
+    }
+  }, [])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [ui, setUiState] = useState({ exportOpen: false, commandOpen: false, shortcutsOpen: false, navOpen: false })
   const routeRef = useRef(route)
@@ -182,6 +197,9 @@ export function StoreProvider({ data, onLock, children }: { data: FoundersData; 
     setActiveId,
     ui,
     setUi,
+    media,
+    density,
+    setDensity,
     lock: onLock,
   }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
